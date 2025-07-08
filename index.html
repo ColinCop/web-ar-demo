@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Three.js + AR.js Demo</title>
+    <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
+    <script src="https://cdn.rawgit.com/jeromeetienne/AR.js/3.3.2/aframe/build/aframe-ar.js"></script>
+    <style>
+      body { margin: 0; overflow: hidden; }
+      canvas { position: absolute; top: 0; left: 0; }
+    </style>
+  </head>
+  <body>
+    <!-- AR scene -->
+    <a-scene embedded arjs>
+      <!-- Marker (usa el patrón de Hiro por defecto) -->
+      <a-marker preset="hiro">
+        <!-- Cubo rojo encima del marcador -->
+        <a-box position="0 0.5 0" material="color: red;"></a-box>
+      </a-marker>
+
+      <!-- Cámara AR -->
+      <a-entity camera></a-entity>
+    </a-scene>
+  </body>
+</html>
