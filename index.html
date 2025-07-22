@@ -1,105 +1,33 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
   <head>
-    <meta charset="UTF-8" />
-    <title>WebXR AR Cube</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>MindAR AR Example</title>
+    <meta charset="utf-8" />
+    <script src="https://cdn.jsdelivr.net/npm/aframe@1.4.2/dist/aframe.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.1.7/dist/aframe/mindar-image-aframe.prod.js"></script>
     <style>
       body {
         margin: 0;
         overflow: hidden;
-        font-family: sans-serif;
-      }
-      button {
-        position: absolute;
-        top: 20px;
-        left: 20px;
-        z-index: 1;
-        padding: 10px 20px;
-        font-size: 16px;
       }
     </style>
   </head>
+
   <body>
-    <script type="module">
-      import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js';
-      import { ARButton } from 'https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/webxr/ARButton.js';
+    <a-scene mindar-image="imageTargetSrc: ./targets.mind;" color-space="sRGB" embedded
+             vr-mode-ui="enabled: false"
+             device-orientation-permission-ui="enabled: true">
+      
+      <a-assets>
+        <!-- Puedes cargar modelos glTF/glb aquí -->
+      </a-assets>
 
-      let camera, scene, renderer;
-      let controller;
+      <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
 
-      init();
-      animate();
+      <a-entity mindar-image-target="targetIndex: 0">
+        <a-box color="red" position="0 0 0" scale="0.5 0.5 0.5" rotation="0 45 0"></a-box>
+      </a-entity>
 
-      function init() {
-        scene = new THREE.Scene();
-
-        camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.01, 20);
-
-        renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-        renderer.setPixelRatio(window.devicePixelRatio);
-        renderer.setSize(window.innerWidth, window.innerHeight);
-        renderer.xr.enabled = true;
-        document.body.appendChild(renderer.domElement);
-
-        document.body.appendChild(ARButton.createButton(renderer, { requiredFeatures: ['hit-test'] }));
-
-        // Light
-        const light = new THREE.HemisphereLight(0xffffff, 0xbbbbff, 1);
-        scene.add(light);
-
-        // Hit testing
-        const reticle = new THREE.Mesh(
-          new THREE.RingGeometry(0.1, 0.11, 32).rotateX(-Math.PI / 2),
-          new THREE.MeshBasicMaterial({ color: 0x0fff00 })
-        );
-        reticle.visible = false;
-        scene.add(reticle);
-
-        const hitTestSource = { current: null };
-        let localSpace = null;
-
-        controller = renderer.xr.getController(0);
-        controller.addEventListener('select', () => {
-          if (reticle.visible) {
-            const geometry = new THREE.BoxGeometry(0.1, 0.1, 0.1);
-            const material = new THREE.MeshPhongMaterial({ color: 0x00ff00 });
-            const mesh = new THREE.Mesh(geometry, material);
-            mesh.position.setFromMatrixPosition(reticle.matrix);
-            scene.add(mesh);
-          }
-        });
-        scene.add(controller);
-
-        renderer.xr.addEventListener('sessionstart', async () => {
-          const session = renderer.xr.getSession();
-          const viewerSpace = await session.requestReferenceSpace('viewer');
-          hitTestSource.current = await session.requestHitTestSource({ space: viewerSpace });
-          localSpace = await session.requestReferenceSpace('local');
-        });
-
-        renderer.setAnimationLoop((timestamp, frame) => {
-          if (frame && hitTestSource.current) {
-            const hitTestResults = frame.getHitTestResults(hitTestSource.current);
-            if (hitTestResults.length > 0) {
-              const hit = hitTestResults[0];
-              const pose = hit.getPose(localSpace);
-              reticle.visible = true;
-              reticle.matrix.fromArray(pose.transform.matrix);
-            } else {
-              reticle.visible = false;
-            }
-          }
-
-          renderer.render(scene, camera);
-        });
-      }
-
-      function animate() {
-        renderer.setAnimationLoop(() => {
-          renderer.render(scene, camera);
-        });
-      }
-    </script>
+    </a-scene>
   </body>
 </html>
