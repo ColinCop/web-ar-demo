@@ -1,27 +1,105 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
   <head>
-    <meta charset="utf-8" />
-    <title>AR.js + A-Frame Demo</title>
-    <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/ar.js@3.4.2/aframe/build/aframe-ar.min.js"></script>
+    <meta charset="UTF-8" />
+    <title>WebXR AR Cube</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <style>
-      body, html {
+      body {
         margin: 0;
         overflow: hidden;
-        width: 100%;
-        height: 100%;
+        font-family: sans-serif;
+      }
+      button {
+        position: absolute;
+        top: 20px;
+        left: 20px;
+        z-index: 1;
+        padding: 10px 20px;
+        font-size: 16px;
       }
     </style>
   </head>
   <body>
-    <a-scene embedded arjs="sourceType: webcam;">
-      <!-- Cámara -->
-      <a-marker preset="hiro">
-        <!-- Cubo sobre el marcador -->
-        <a-box position="0 0.5 0" color="red"></a-box>
-      </a-marker>
-      <a-entity camera></a-entity>
-    </a-scene>
+    <script type="module">
+      import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js';
+      import { ARButton } from 'https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/webxr/ARButton.js';
+
+      let camera, scene, renderer;
+      let controller;
+
+      init();
+      animate();
+
+      function init() {
+        scene = new THREE.Scene();
+
+        camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.01, 20);
+
+        renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+        renderer.setPixelRatio(window.devicePixelRatio);
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.xr.enabled = true;
+        document.body.appendChild(renderer.domElement);
+
+        document.body.appendChild(ARButton.createButton(renderer, { requiredFeatures: ['hit-test'] }));
+
+        // Light
+        const light = new THREE.HemisphereLight(0xffffff, 0xbbbbff, 1);
+        scene.add(light);
+
+        // Hit testing
+        const reticle = new THREE.Mesh(
+          new THREE.RingGeometry(0.1, 0.11, 32).rotateX(-Math.PI / 2),
+          new THREE.MeshBasicMaterial({ color: 0x0fff00 })
+        );
+        reticle.visible = false;
+        scene.add(reticle);
+
+        const hitTestSource = { current: null };
+        let localSpace = null;
+
+        controller = renderer.xr.getController(0);
+        controller.addEventListener('select', () => {
+          if (reticle.visible) {
+            const geometry = new THREE.BoxGeometry(0.1, 0.1, 0.1);
+            const material = new THREE.MeshPhongMaterial({ color: 0x00ff00 });
+            const mesh = new THREE.Mesh(geometry, material);
+            mesh.position.setFromMatrixPosition(reticle.matrix);
+            scene.add(mesh);
+          }
+        });
+        scene.add(controller);
+
+        renderer.xr.addEventListener('sessionstart', async () => {
+          const session = renderer.xr.getSession();
+          const viewerSpace = await session.requestReferenceSpace('viewer');
+          hitTestSource.current = await session.requestHitTestSource({ space: viewerSpace });
+          localSpace = await session.requestReferenceSpace('local');
+        });
+
+        renderer.setAnimationLoop((timestamp, frame) => {
+          if (frame && hitTestSource.current) {
+            const hitTestResults = frame.getHitTestResults(hitTestSource.current);
+            if (hitTestResults.length > 0) {
+              const hit = hitTestResults[0];
+              const pose = hit.getPose(localSpace);
+              reticle.visible = true;
+              reticle.matrix.fromArray(pose.transform.matrix);
+            } else {
+              reticle.visible = false;
+            }
+          }
+
+          renderer.render(scene, camera);
+        });
+      }
+
+      function animate() {
+        renderer.setAnimationLoop(() => {
+          renderer.render(scene, camera);
+        });
+      }
+    </script>
   </body>
 </html>
